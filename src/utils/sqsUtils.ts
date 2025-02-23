@@ -1,17 +1,20 @@
 import {
   paginateListQueues,
-  SendMessageCommand,
   GetQueueAttributesCommand,
   SQSClient,
+  QueueAttributeName,
 } from "@aws-sdk/client-sqs";
 
 export const getSQSQueues = async (client: SQSClient) => {
   const paginatedQueues = paginateListQueues({ client }, {});
-  const queueUrls = [];
+  const queueUrls: Record<
+    string,
+    Partial<Record<QueueAttributeName, string>>
+  > = {};
 
   for await (const page of paginatedQueues) {
     if (page.QueueUrls?.length) {
-      const queueUrlsPromise = page.QueueUrls.map(async (queueUrl) => {
+      for (const queueUrl of page.QueueUrls) {
         const queueAttributes = await client.send(
           new GetQueueAttributesCommand({
             QueueUrl: queueUrl,
@@ -19,14 +22,13 @@ export const getSQSQueues = async (client: SQSClient) => {
           })
         );
 
-        return [queueUrl, queueAttributes.Attributes];
-      });
-
-      queueUrls.push(...(await Promise.all(queueUrlsPromise)));
+        if (queueAttributes?.Attributes)
+          queueUrls[queueUrl] = queueAttributes.Attributes;
+      }
     }
   }
 
-  return Object.fromEntries(queueUrls);
+  return queueUrls;
 };
 
 export const sendSQSMessage = () => {
