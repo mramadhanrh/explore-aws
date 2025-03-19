@@ -1,10 +1,11 @@
 import {
   ListSubscriptionsByTopicCommand,
-  ListSubscriptionsByTopicCommandOutput,
   paginateListTopics,
+  PublishCommand,
   SNSClient,
   Subscription,
 } from "@aws-sdk/client-sns";
+import { appConfig } from "../constants/appConfig";
 
 export const getSNSTopics = async (client: SNSClient) => {
   const paginatedTopics = paginateListTopics({ client }, {});
@@ -26,4 +27,15 @@ export const getSNSTopics = async (client: SNSClient) => {
   }
 
   return topicSubs;
+};
+
+export const sendSNSMessage = async (client: SNSClient, message: string) => {
+  const response = await client.send(
+    new PublishCommand({
+      Message: message,
+      TopicArn: appConfig.aws.sns.transaction,
+    })
+  );
+
+  return response;
 };
